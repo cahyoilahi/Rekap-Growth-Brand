@@ -1,131 +1,163 @@
 // Import library yang dibutuhkan
 const express = require('express');
-const cors = require('cors'); // Untuk mengizinkan koneksi dari frontend
+const cors = require('cors');
+const mysql = require('mysql2/promise'); // Library untuk MySQL
+const cron = require('node-cron');
 
 // Inisialisasi aplikasi Express
 const app = express();
-const PORT = 3000; // Server akan berjalan di port 3000
+const PORT = 3000;
 
-// Gunakan CORS agar frontend bisa mengakses backend ini
 app.use(cors());
 
 // =================================================================
-// BAGIAN SIMULASI - Di aplikasi nyata, bagian ini akan diganti
+// KONEKSI DATABASE MYSQL
+// GANTI BAGIAN INI DENGAN DETAIL DATABASE ANDA
 // =================================================================
+const pool = mysql.createPool({
+    host: 'localhost',         // Ganti jika perlu
+    user: 'root',              // Ganti dengan username database Anda
+    password: 'password_anda', // Ganti dengan password database Anda
+    database: 'nama_database_anda', // Ganti dengan nama database Anda
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
 
-/**
- * SIMULASI DATABASE
- * Di aplikasi nyata, Anda akan menggunakan database seperti PostgreSQL, MongoDB, atau MySQL.
- * Objek ini bertindak sebagai penyimpanan sementara untuk data pertumbuhan.
- */
-const simulatedDatabase = {};
+// Tes koneksi saat server mulai
+pool.getConnection()
+    .then(connection => {
+        console.log('✅ Berhasil terhubung ke database MySQL!');
+        connection.release();
+    })
+    .catch(err => {
+        console.error('❌ Gagal terhubung ke database:', err.message);
+    });
 
-/**
- * FUNGSI SIMULASI UNTUK MENGAMBIL DATA DARI API INSTAGRAM
- * @param {string} username - Username Instagram
- * @returns {Promise<object>} - Data followers dan likes
- */
+// =================================================================
+// FUNGSI SIMULASI API (Tidak perlu diubah)
+// =================================================================
 async function fetchInstagramData(username) {
     console.log(`[API SIM] Meminta data untuk Instagram: @${username}`);
-    // Di sini Anda akan menggunakan library seperti 'axios' atau 'node-fetch'
-    // untuk memanggil API Instagram Graph dengan Kunci API Anda.
-    // Kita simulasikan dengan data acak.
     return {
-        followers: Math.floor(Math.random() * (60000 - 50000) + 50000), // antara 50k - 60k
+        followers: Math.floor(Math.random() * (60000 - 50000) + 50000),
         likes: Math.floor(Math.random() * (25000 - 20000) + 20000)
     };
 }
-
-/**
- * FUNGSI SIMULASI UNTUK MENGAMBIL DATA DARI API X (TWITTER)
- * @param {string} username - Username X
- * @returns {Promise<object>} - Data followers dan likes
- */
 async function fetchXData(username) {
     console.log(`[API SIM] Meminta data untuk X: @${username}`);
-    // Panggil API X di sini...
     return {
-        followers: Math.floor(Math.random() * (30000 - 20000) + 20000), // antara 20k - 30k
+        followers: Math.floor(Math.random() * (30000 - 20000) + 20000),
         likes: Math.floor(Math.random() * (18000 - 12000) + 12000)
     };
 }
-
-/**
- * FUNGSI SIMULASI UNTUK MENGAMBIL DATA DARI API TIKTOK
- * @param {string} username - Username TikTok
- * @returns {Promise<object>} - Data followers dan likes
- */
 async function fetchTikTokData(username) {
     console.log(`[API SIM] Meminta data untuk TikTok: @${username}`);
-    // Panggil API TikTok di sini...
     return {
-        followers: Math.floor(Math.random() * (50000 - 40000) + 40000), // antara 40k - 50k
+        followers: Math.floor(Math.random() * (50000 - 40000) + 40000),
         likes: Math.floor(Math.random() * (10000 - 7000) + 7000)
     };
 }
 
-/**
- * FUNGSI UTAMA UNTUK MENGAMBIL DAN MENYIMPAN DATA HARIAN
- * Di aplikasi nyata, fungsi ini akan dijalankan oleh cron job setiap hari.
- */
+// =================================================================
+// FUNGSI PENYIMPANAN DATA KE DATABASE
+// =================================================================
 async function fetchAndStoreDailyData(usernames) {
-    const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+    const today = new Date().toISOString().split('T')[0];
     
-    // Ambil data dari semua platform secara bersamaan
     const [igData, xData, tiktokData] = await Promise.all([
         fetchInstagramData(usernames.instagram),
         fetchXData(usernames.x),
         fetchTikTokData(usernames.tiktok)
     ]);
 
-    // Simpan ke database simulasi kita
-    if (!simulatedDatabase[today]) {
-        simulatedDatabase[today] = {};
-    }
-    simulatedDatabase[today] = {
-        instagram: igData,
-        x: xData,
-        tiktok: tiktokData,
-        totalFollowers: igData.followers + xData.followers + tiktokData.followers,
-        totalLikes: igData.likes + xData.likes + tiktokData.likes,
-    };
+    const stats = [
+        { platform: 'instagram', username: usernames.instagram, ...igData },
+        { platform: 'x', username: usernames.x, ...xData },
+        { platform: 'tiktok', username: usernames.tiktok, ...tiktokData }
+    ];
 
-    console.log(`[DB SIM] Data untuk tanggal ${today} berhasil disimpan:`, simulatedDatabase[today]);
+    try {
+        const connection = await pool.getConnection();
+        for (const data of stats) {
+            const query = `
+                INSERT INTO social_media_stats (platform, username, followers, likes, recorded_at)
+                VALUES (?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE 
+                    followers = VALUES(followers), 
+                    likes = VALUES(likes),
+                    username = VALUES(username);
+            `;
+            const values = [data.platform, data.username, data.followers, data.likes, today];
+            await connection.execute(query, values);
+        }
+        connection.release();
+        console.log(`[DB] Data untuk tanggal ${today} berhasil disimpan atau diperbarui.`);
+    } catch (error) {
+        console.error('[DB] Gagal menyimpan data:', error);
+    }
 }
 
-
 // =================================================================
-// BAGIAN API ENDPOINT - Ini adalah "pintu" yang diakses frontend
+// API ENDPOINT YANG DIAKSES FRONTEND
 // =================================================================
-
 app.get('/api/growth-data', async (req, res) => {
-    const { instagram, x, tiktok, period } = req.query;
+    const period = parseInt(req.query.period) || 30;
 
-    if (!instagram || !x || !tiktok || !period) {
-        return res.status(400).json({ error: 'Parameter tidak lengkap. Diperlukan username dan periode.' });
+    try {
+        const query = `
+            SELECT
+                recorded_at AS date,
+                SUM(followers) AS total_followers,
+                SUM(likes) AS total_likes
+            FROM
+                social_media_stats
+            WHERE
+                recorded_at >= CURDATE() - INTERVAL ? DAY
+            GROUP BY
+                recorded_at
+            ORDER BY
+                recorded_at ASC;
+        `;
+        
+        const [rows] = await pool.query(query, [period]);
+
+        if (rows.length === 0) {
+            return res.json({ labels: [], followers: [], likes: [] });
+        }
+
+        const chartData = {
+            labels: rows.map(row => new Date(row.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })),
+            followers: rows.map(row => (Number(row.total_followers) / 1000).toFixed(1)),
+            likes: rows.map(row => (Number(row.total_likes) / 1000).toFixed(1))
+        };
+        
+        res.json(chartData);
+    } catch (error) {
+        console.error('[API] Gagal mengambil data dari database:', error);
+        res.status(500).json({ error: 'Terjadi kesalahan pada server.' });
     }
-
-    // SIMULASI: Setiap kali frontend meminta data, kita jalankan proses pengambilan data harian.
-    // Di aplikasi nyata, proses ini berjalan terpisah di latar belakang.
-    await fetchAndStoreDailyData({ instagram, x, tiktok });
-
-    // LOGIKA UNTUK MENYIAPKAN DATA GRAFIK
-    // Di aplikasi nyata, Anda akan mengambil data dari database asli untuk 7, 30, atau 90 hari terakhir.
-    // Kita akan tetap menggunakan data statis untuk struktur grafiknya agar sederhana.
-    const chartDataStructure = {
-        '7': { labels: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'], followers: [124, 126, 129, 135, 140, 148, 155], likes: [5.2, 5.8, 6.1, 5.5, 7.2, 8.0, 7.5] },
-        '30': { labels: ['Minggu 1', 'Minggu 2', 'Minggu 3', 'Minggu 4'], followers: [105, 112, 119, 125.6], likes: [10.5, 12.1, 11.8, 10.8] },
-        '90': { labels: ['Bulan 1', 'Bulan 2', 'Bulan 3'], followers: [88, 105, 125.6], likes: [35.2, 40.1, 45.2] }
-    };
-    
-    // Kirim data kembali ke frontend
-    res.json(chartDataStructure[period] || chartDataStructure['30']);
 });
 
+// =================================================================
+// PENJADWALAN OTOMATIS (CRON JOB)
+// =================================================================
+cron.schedule('5 0 * * *', () => {
+    console.log('[CRON] Menjalankan tugas harian...');
+    fetchAndStoreDailyData({
+        instagram: 'user_ig_anda',
+        x: 'user_x_anda',
+        tiktok: 'user_tiktok_anda'
+    });
+}, {
+    timezone: "Asia/Jakarta"
+});
 
-// Menjalankan server
+// =================================================================
+// MENJALANKAN SERVER
+// =================================================================
 app.listen(PORT, () => {
-    console.log(`Server berjalan di http://localhost:${PORT}`);
-    console.log("Backend ini siap menerima permintaan dari frontend Anda.");
-    console.log("CATATAN: Data yang dikirim masih berupa simulasi, tetapi strukturnya sudah benar.");
+    console.log(`🚀 Server berjalan di http://localhost:${PORT}`);
+    console.log("   Backend siap menerima permintaan dari frontend.");
+    console.log("   Cron job untuk pengambilan data harian telah dijadwalkan.");
 });
