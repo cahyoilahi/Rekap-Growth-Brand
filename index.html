@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dasbor Pertumbuhan Sosial</title>
+
+    <!-- Menggunakan Tailwind CSS untuk styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Menggunakan Chart.js untuk grafik -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Library untuk membuat PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- Menggunakan Google Fonts untuk tipografi -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .btn-active {
+            background-color: #4f46e5 !important;
+            color: #ffffff !important;
+        }
+        /* Secara default, sembunyikan tampilan input dan dasbor */
+        
+        #social-input-view,
+        #dashboard-view {
+            display: none;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-gray-200">
+
+    <!-- ================================================== -->
+    <!-- TAMPILAN LOGIN                                     -->
+    <!-- ================================================== -->
+    <div id="login-view" class="flex items-center justify-center min-h-screen">
+        <div class="w-full max-w-md p-8 space-y-8 bg-slate-800 rounded-2xl shadow-lg">
+            <div class="text-center">
+                <h1 class="text-3xl font-bold text-white">Selamat Datang</h1>
+                <p class="mt-2 text-slate-400">Masuk untuk melanjutkan ke dasbor Anda.</p>
+            </div>
+            <form id="login-form" class="mt-8 space-y-6">
+                <div class="rounded-md shadow-sm -space-y-px">
+                    <div>
+                        <label for="email-address" class="sr-only">Alamat Email</label>
+                        <input id="email-address" name="email" type="email" autocomplete="email" required class="appearance-none rounded-none relative block w-full px-3 py-3 border border-slate-700 bg-slate-900 text-gray-200 placeholder-slate-500 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                            placeholder="Alamat Email (contoh: user@mail.com)">
+                    </div>
+                    <div>
+                        <label for="password" class="sr-only">Password</label>
+                        <input id="password" name="password" type="password" autocomplete="current-password" required class="appearance-none rounded-none relative block w-full px-3 py-3 border border-slate-700 bg-slate-900 text-gray-200 placeholder-slate-500 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                            placeholder="Password (isi apa saja)">
+                    </div>
+                </div>
+                <div id="login-error-message" class="text-red-400 text-sm text-center hidden">Email atau password harus diisi.</div>
+                <div class="flex items-center justify-end">
+                    <div class="text-sm"><a href="#" class="font-medium text-indigo-400 hover:text-indigo-300">Lupa password?</a></div>
+                </div>
+                <div>
+                    <button type="submit" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-indigo-500 transition-colors">Masuk</button>
+                </div>
+            </form>
+            <p class="mt-6 text-center text-sm text-slate-400">Belum punya akun? <a href="#" class="font-medium text-indigo-400 hover:text-indigo-300">Daftar di sini</a></p>
+        </div>
+    </div>
+
+    <!-- ================================================== -->
+    <!-- TAMPILAN INPUT MEDIA SOSIAL                        -->
+    <!-- ================================================== -->
+    <div id="social-input-view" class="flex items-center justify-center min-h-screen">
+        <div class="w-full max-w-lg p-8 space-y-8 bg-slate-800 rounded-2xl shadow-lg">
+            <div class="text-center">
+                <h1 class="text-3xl font-bold text-white">Hubungkan Akun Anda</h1>
+                <p class="mt-2 text-slate-400">Masukkan username akun yang ingin Anda lacak.</p>
+            </div>
+            <form id="social-form" class="mt-8 space-y-6">
+                <!-- Input Instagram -->
+                <div>
+                    <label for="instagram-username" class="block text-sm font-medium text-slate-300 mb-2">Instagram</label>
+                    <div class="flex items-center bg-slate-900 border border-slate-700 rounded-md">
+                        <span class="px-3 text-slate-500">@</span>
+                        <input id="instagram-username" name="instagram" type="text" required class="flex-1 p-3 bg-transparent placeholder-slate-500 focus:outline-none sm:text-sm" placeholder="username_instagram">
+                    </div>
+                </div>
+                <!-- Input X (Twitter) -->
+                <div>
+                    <label for="x-username" class="block text-sm font-medium text-slate-300 mb-2">X (Twitter)</label>
+                    <div class="flex items-center bg-slate-900 border border-slate-700 rounded-md">
+                        <span class="px-3 text-slate-500">@</span>
+                        <input id="x-username" name="x-twitter" type="text" required class="flex-1 p-3 bg-transparent placeholder-slate-500 focus:outline-none sm:text-sm" placeholder="username_x">
+                    </div>
+                </div>
+                <!-- Input TikTok -->
+                <div>
+                    <label for="tiktok-username" class="block text-sm font-medium text-slate-300 mb-2">TikTok</label>
+                    <div class="flex items-center bg-slate-900 border border-slate-700 rounded-md">
+                        <span class="px-3 text-slate-500">@</span>
+                        <input id="tiktok-username" name="tiktok" type="text" required class="flex-1 p-3 bg-transparent placeholder-slate-500 focus:outline-none sm:text-sm" placeholder="username_tiktok">
+                    </div>
+                </div>
+                <div id="social-error-message" class="text-red-400 text-sm text-center hidden">Harap isi semua username.</div>
+                <div>
+                    <button type="submit" class="group mt-4 relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-indigo-500 transition-colors">Lanjutkan ke Dasbor</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- ================================================== -->
+    <!-- TAMPILAN DASBOR                                    -->
+    <!-- ================================================== -->
+    <div id="dashboard-view">
+        <div class="container mx-auto p-4 md:p-8">
+            <header class="mb-8 flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold text-white">Dasbor Pertumbuhan</h1>
+                    <p class="text-slate-400 mt-2">Selamat datang kembali, <span id="user-email" class="font-semibold">User</span>!</p>
+                </div>
+                <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Logout</button>
+            </header>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <!-- Summary Cards -->
+                <div class="bg-slate-800 p-6 rounded-lg shadow-lg flex items-center space-x-4">
+                    <div class="bg-indigo-500 p-3 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                    <div>
+                        <p class="text-slate-400 text-sm">Total Pengikut</p>
+                        <p class="text-2xl font-bold text-white">125,6K</p>
+                    </div>
+                </div>
+                <div class="bg-slate-800 p-6 rounded-lg shadow-lg flex items-center space-x-4">
+                    <div class="bg-pink-500 p-3 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+                    <div>
+                        <p class="text-slate-400 text-sm">Total Suka (30 Hari)</p>
+                        <p class="text-2xl font-bold text-white">45,2K</p>
+                    </div>
+                </div>
+                <div class="bg-slate-800 p-6 rounded-lg shadow-lg">
+                    <p class="text-slate-400 text-sm">Pertumbuhan Pengikut</p>
+                    <p class="text-2xl font-bold text-white">+2,1K</p>
+                    <p class="text-sm text-green-400 flex items-center mt-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+                        <span class="ml-1">+5.8%</span>
+                    </p>
+                </div>
+                <div class="bg-slate-800 p-6 rounded-lg shadow-lg">
+                    <p class="text-slate-400 text-sm">Engagement Rate</p>
+                    <p class="text-2xl font-bold text-white">3.2%</p>
+                    <p class="text-sm text-red-400 flex items-center mt-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline><polyline points="17 18 23 18 23 12"></polyline></svg>
+                        <span class="ml-1">-0.5%</span>
+                    </p>
+                </div>
+            </div>
+
+            <div id="chart-container" class="bg-slate-800 p-4 md:p-6 rounded-lg shadow-lg mb-8">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+                    <h2 class="text-xl font-bold text-white mb-2 sm:mb-0">Analisis Pertumbuhan</h2>
+                    <div class="flex items-center space-x-2">
+                        <div id="time-filter" class="flex space-x-2">
+                            <button class="time-btn px-3 py-1 text-sm rounded-md bg-slate-700 hover:bg-indigo-500 transition-colors" data-days="7">7H</button>
+                            <button class="time-btn px-3 py-1 text-sm rounded-md bg-slate-700 hover:bg-indigo-500 transition-colors btn-active" data-days="30">30H</button>
+                            <button class="time-btn px-3 py-1 text-sm rounded-md bg-slate-700 hover:bg-indigo-500 transition-colors" data-days="90">90H</button>
+                        </div>
+                        <!-- Tombol Download PDF BARU -->
+                        <button id="download-pdf-btn" class="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-md transition-colors text-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+                            <span>Unduh PDF</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="h-80 md:h-96"><canvas id="growthChart"></canvas></div>
+            </div>
+
+            <div>
+                <h2 class="text-2xl font-bold text-white mb-6">Rincian per Platform</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Card Instagram -->
+                    <div class="bg-slate-800 p-6 rounded-lg shadow-lg">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center space-x-3"><img src="https://placehold.co/40x40/DD2A7B/FFFFFF?text=IG" alt="Logo Instagram" class="rounded-full"><span class="font-bold text-lg text-white">Instagram</span></div><span class="text-sm text-green-400">+1,2K</span></div>
+                        <p id="ig-card-username" class="text-indigo-400 mb-2 font-mono">@username</p>
+                        <div>
+                            <p class="text-3xl font-bold text-white">55,4K</p>
+                            <p class="text-slate-400">Pengikut</p>
+                        </div>
+                        <div class="mt-4">
+                            <p class="text-3xl font-bold text-white">21,8K</p>
+                            <p class="text-slate-400">Suka (30 Hari)</p>
+                        </div>
+                    </div>
+                    <!-- Card X (Twitter) -->
+                    <div class="bg-slate-800 p-6 rounded-lg shadow-lg">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center space-x-3"><img src="https://placehold.co/40x40/000000/FFFFFF?text=X" alt="Logo X" class="rounded-full"><span class="font-bold text-lg text-white">X (Twitter)</span></div><span class="text-sm text-green-400">+750</span></div>
+                        <p id="x-card-username" class="text-indigo-400 mb-2 font-mono">@username</p>
+                        <div>
+                            <p class="text-3xl font-bold text-white">25,1K</p>
+                            <p class="text-slate-400">Pengikut</p>
+                        </div>
+                        <div class="mt-4">
+                            <p class="text-3xl font-bold text-white">15,3K</p>
+                            <p class="text-slate-400">Suka (30 Hari)</p>
+                        </div>
+                    </div>
+                    <!-- Card TikTok -->
+                    <div class="bg-slate-800 p-6 rounded-lg shadow-lg">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center space-x-3"><img src="https://placehold.co/40x40/00F2EA/000000?text=TT" alt="Logo TikTok" class="rounded-full"><span class="font-bold text-lg text-white">TikTok</span></div><span class="text-sm text-green-400">+150</span></div>
+                        <p id="tiktok-card-username" class="text-indigo-400 mb-2 font-mono">@username</p>
+                        <div>
+                            <p class="text-3xl font-bold text-white">45,1K</p>
+                            <p class="text-slate-400">Pengikut</p>
+                        </div>
+                        <div class="mt-4">
+                            <p class="text-3xl font-bold text-white">8,1K</p>
+                            <p class="text-slate-400">Suka (30 Hari)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- ELEMEN DOM ---
+            const loginView = document.getElementById('login-view');
+            const socialInputView = document.getElementById('social-input-view');
+            const dashboardView = document.getElementById('dashboard-view');
+            const loginForm = document.getElementById('login-form');
+            const socialForm = document.getElementById('social-form');
+            const logoutBtn = document.getElementById('logout-btn');
+            const downloadPdfBtn = document.getElementById('download-pdf-btn');
+            const userEmailSpan = document.getElementById('user-email');
+            const emailInput = document.getElementById('email-address');
+            const passwordInput = document.getElementById('password');
+            const loginErrorMessage = document.getElementById('login-error-message');
+            const igUserInput = document.getElementById('instagram-username');
+            const xUserInput = document.getElementById('x-username');
+            const tiktokUserInput = document.getElementById('tiktok-username');
+            const socialErrorMessage = document.getElementById('social-error-message');
+
+            let growthChartInstance = null;
+            const {
+                jsPDF
+            } = window.jspdf;
+
+            function initChart() {
+                if (growthChartInstance) {
+                    growthChartInstance.destroy();
+                }
+                const mockData = {
+                    '7': {
+                        labels: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'],
+                        followers: [124, 126, 129, 135, 140, 148, 155],
+                        likes: [5.2, 5.8, 6.1, 5.5, 7.2, 8.0, 7.5]
+                    },
+                    '30': {
+                        labels: ['Minggu 1', 'Minggu 2', 'Minggu 3', 'Minggu 4'],
+                        followers: [105, 112, 119, 125.6],
+                        likes: [10.5, 12.1, 11.8, 10.8]
+                    },
+                    '90': {
+                        labels: ['Bulan 1', 'Bulan 2', 'Bulan 3'],
+                        followers: [88, 105, 125.6],
+                        likes: [35.2, 40.1, 45.2]
+                    }
+                };
+                const ctx = document.getElementById('growthChart').getContext('2d');
+                growthChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: mockData['30'].labels,
+                        datasets: [{
+                            label: 'Pengikut (K)',
+                            data: mockData['30'].followers,
+                            borderColor: '#6366f1',
+                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            fill: true
+                        }, {
+                            label: 'Suka (K)',
+                            data: mockData['30'].likes,
+                            borderColor: '#ec4899',
+                            backgroundColor: 'rgba(236, 72, 153, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        animation: {
+                            onComplete: () => { /* Chart is ready */ }
+                        },
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#94a3b8',
+                                    callback: (v) => v + 'K'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    color: '#94a3b8'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                align: 'end',
+                                labels: {
+                                    color: '#cbd5e1',
+                                    usePointStyle: true,
+                                    boxWidth: 8
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: '#1e293b',
+                                titleColor: '#ffffff',
+                                bodyColor: '#cbd5e1',
+                                borderColor: '#334155',
+                                borderWidth: 1,
+                                padding: 10,
+                                callbacks: {
+                                    label: (c) => `${c.dataset.label}: ${c.parsed.y}K`
+                                }
+                            }
+                        },
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    }
+                });
+                const timeFilterButtons = document.querySelectorAll('.time-btn');
+                timeFilterButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        const days = button.dataset.days;
+                        growthChartInstance.data.labels = mockData[days].labels;
+                        growthChartInstance.data.datasets[0].data = mockData[days].followers;
+                        growthChartInstance.data.datasets[1].data = mockData[days].likes;
+                        growthChartInstance.update();
+                        timeFilterButtons.forEach(btn => btn.classList.remove('btn-active'));
+                        button.classList.add('btn-active');
+                    });
+                });
+            }
+
+            // --- ALUR LOGIN ---
+            loginForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                if (emailInput.value.trim() === '' || passwordInput.value.trim() === '') {
+                    loginErrorMessage.classList.remove('hidden');
+                    return;
+                }
+                loginErrorMessage.classList.add('hidden');
+                userEmailSpan.textContent = emailInput.value;
+                loginView.style.display = 'none';
+                socialInputView.style.display = 'flex';
+            });
+
+            // --- ALUR INPUT SOSIAL MEDIA ---
+            socialForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                const igValue = igUserInput.value.trim();
+                const xValue = xUserInput.value.trim();
+                const tiktokValue = tiktokUserInput.value.trim();
+                if (igValue === '' || xValue === '' || tiktokValue === '') {
+                    socialErrorMessage.classList.remove('hidden');
+                    return;
+                }
+                socialErrorMessage.classList.add('hidden');
+                document.getElementById('ig-card-username').textContent = `@${igValue}`;
+                document.getElementById('x-card-username').textContent = `@${xValue}`;
+                document.getElementById('tiktok-card-username').textContent = `@${tiktokValue}`;
+                socialInputView.style.display = 'none';
+                dashboardView.style.display = 'block';
+                initChart();
+            });
+
+            // --- ALUR LOGOUT ---
+            logoutBtn.addEventListener('click', function() {
+                emailInput.value = '';
+                passwordInput.value = '';
+                igUserInput.value = '';
+                xUserInput.value = '';
+                tiktokUserInput.value = '';
+                dashboardView.style.display = 'none';
+                socialInputView.style.display = 'none';
+                loginView.style.display = 'flex';
+                if (growthChartInstance) {
+                    growthChartInstance.destroy();
+                    growthChartInstance = null;
+                }
+            });
+
+            // --- FUNGSI DOWNLOAD PDF ---
+            downloadPdfBtn.addEventListener('click', function() {
+                const chartContainer = document.getElementById('chart-container');
+                const chartCanvas = document.getElementById('growthChart');
+
+                // Menggunakan html2canvas untuk mengambil gambar dari elemen chart
+                html2canvas(chartContainer, {
+                    backgroundColor: '#1e293b' // Warna background slate-800
+                }).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const pdf = new jsPDF({
+                        orientation: 'landscape',
+                        unit: 'px',
+                        format: [canvas.width, canvas.height]
+                    });
+
+                    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+                    pdf.save('laporan-pertumbuhan.pdf');
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>
