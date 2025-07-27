@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dasbor Pertumbuhan Sosial</title>
+
+    <!-- Menggunakan Tailwind CSS untuk styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Menggunakan Chart.js untuk membuat grafik -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Menggunakan jsPDF dan html2canvas untuk fungsionalitas unduh PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- Menggunakan Google Fonts untuk tipografi -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icon Library untuk tombol AI -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .btn-active { background-color: #4f46e5 !important; color: #ffffff !important; }
+        #social-input-view, #dashboard-view { display: none; }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 4px solid #4f46e5;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            flex-direction: column;
+            color: white;
+            font-size: 1.2rem;
+            text-align: center;
+            padding: 1rem;
+        }
+        .gemini-card {
+            background-color: #2a374a;
+            border-left: 4px solid #818cf8;
+        }
+        .stat-card {
+            background-color: #1e293b;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .stat-value {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: #ffffff;
+        }
+        .stat-label {
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+        .growth-positive { color: #4ade80; }
+        .growth-negative { color: #f87171; }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-gray-200">
+    <!-- Overlay untuk Loading, ditampilkan secara default -->
+    <div id="loading-overlay" class="flex">
+        <div class="loader"></div>
+        <p id="loading-text" class="mt-4">Menginisialisasi Aplikasi...</p>
+    </div>
+
+    <!-- Tampilan Input Akun Sosial (ditampilkan jika akun belum ada) -->
+    <div id="social-input-view" class="flex-col items-center justify-center min-h-screen p-4">
+        <div class="w-full max-w-lg p-8 space-y-8 bg-slate-800 rounded-2xl shadow-lg">
+            <div class="text-center">
+                <h1 class="text-3xl font-bold text-white">Selamat Datang!</h1>
+                <p class="mt-2 text-slate-400">Sepertinya ini pertama kali Anda. Silakan hubungkan akun media sosial Anda untuk memulai.</p>
+            </div>
+            <form id="social-form" class="mt-8 space-y-6">
+                 <div>
+                    <label for="instagram-username" class="block text-sm font-medium text-slate-300 mb-2">Instagram</label>
+                    <input id="instagram-username" required class="w-full p-3 bg-slate-900 border border-slate-700 rounded-md placeholder-slate-500 focus:outline-none sm:text-sm" placeholder="@username_instagram">
+                </div>
+                <div>
+                    <label for="x-username" class="block text-sm font-medium text-slate-300 mb-2">X (Twitter)</label>
+                    <input id="x-username" required class="w-full p-3 bg-slate-900 border border-slate-700 rounded-md placeholder-slate-500 focus:outline-none sm:text-sm" placeholder="@username_x">
+                </div>
+                 <div>
+                    <label for="tiktok-username" class="block text-sm font-medium text-slate-300 mb-2">TikTok</label>
+                    <input id="tiktok-username" required class="w-full p-3 bg-slate-900 border border-slate-700 rounded-md placeholder-slate-500 focus:outline-none sm:text-sm" placeholder="@username_tiktok">
+                </div>
+                <div id="social-error-message" class="text-red-400 text-sm text-center hidden">Harap isi semua username.</div>
+                <div>
+                    <button type="submit" class="group mt-4 relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">Simpan Akun & Lanjutkan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tampilan Dasbor Utama -->
+    <div id="dashboard-view">
+        <div class="container mx-auto p-4 md:p-8">
+            <header class="mb-8 flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold text-white">Dasbor Pertumbuhan</h1>
+                    <p id="user-info" class="text-slate-400 mt-2">Memuat data pengguna...</p>
+                </div>
+                <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Logout</button>
+            </header>
+            
+            <!-- Bagian Rekap Performa Terkini -->
+            <div class="mb-12">
+                <h2 class="text-2xl font-bold text-white mb-6">Rekap Performa Terkini</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Kartu Instagram -->
+                    <div class="stat-card">
+                        <div class="flex items-center space-x-3 mb-4" id="ig-header"></div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="stat-label">Pengikut</p>
+                                <h3 id="ig-followers" class="stat-value">0</h3>
+                            </div>
+                            <div>
+                                <p class="stat-label">Pertumbuhan</p>
+                                <h3 id="ig-growth" class="stat-value text-lg">+0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Kartu X -->
+                    <div class="stat-card">
+                        <div class="flex items-center space-x-3 mb-4" id="x-header"></div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="stat-label">Pengikut</p>
+                                <h3 id="x-followers" class="stat-value">0</h3>
+                            </div>
+                             <div>
+                                <p class="stat-label">Pertumbuhan</p>
+                                <h3 id="x-growth" class="stat-value text-lg">+0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Kartu TikTok -->
+                    <div class="stat-card">
+                        <div class="flex items-center space-x-3 mb-4" id="tiktok-header"></div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="stat-label">Pengikut</p>
+                                <h3 id="tiktok-followers" class="stat-value">0</h3>
+                            </div>
+                             <div>
+                                <p class="stat-label">Total Suka</p>
+                                <h3 id="tiktok-likes" class="stat-value">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="chart-container" class="bg-slate-800 p-4 md:p-6 rounded-lg shadow-lg mb-8">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+                    <h2 class="text-xl font-bold text-white mb-2 sm:mb-0">Analisis Pertumbuhan Total</h2>
+                    <div class="flex items-center space-x-2">
+                        <div id="time-filter" class="flex space-x-2">
+                            <button class="time-btn px-3 py-1 text-sm rounded-md bg-slate-700 hover:bg-indigo-500" data-days="7">7H</button>
+                            <button class="time-btn px-3 py-1 text-sm rounded-md bg-slate-700 hover:bg-indigo-500 btn-active" data-days="30">30H</button>
+                            <button class="time-btn px-3 py-1 text-sm rounded-md bg-slate-700 hover:bg-indigo-500" data-days="90">90H</button>
+                        </div>
+                        <button id="download-pdf-btn" class="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-md text-sm">
+                            <span>Unduh PDF</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="h-80 md:h-96"><canvas id="growthChart"></canvas></div>
+            </div>
+            
+            <div id="gemini-analysis-section" class="mt-12">
+                <h2 class="text-2xl font-bold text-white mb-4">✨ Analisis Cerdas Gemini</h2>
+                <div class="flex space-x-4 mb-6">
+                    <button id="gemini-content-btn" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors"><i class="fas fa-lightbulb mr-2"></i> Buat Ide Konten</button>
+                    <button id="gemini-summary-btn" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg transition-colors"><i class="fas fa-chart-line mr-2"></i> Ringkas Performa</button>
+                </div>
+                <div id="gemini-output" class="space-y-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInAnonymously, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- KONFIGURASI FIREBASE ---
+        // PENTING: GANTI DENGAN KONFIGURASI DARI FIREBASE CONSOLE ANDA
+        const firebaseConfig = {
+            apiKey: "AIzaSyCuR0GTjBzHcRwhA9xftZJ8pAYMqbKvNns",
+            authDomain: "growthchannel-6ff60.firebaseapp.com",
+            databaseURL: "https://growthchannel-6ff60-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "growthchannel-6ff60",
+            storageBucket: "growthchannel-6ff60.appspot.com",
+            messagingSenderId: "692405484086",
+            appId: "1:692405484086:web:10f31217983c25e141b697",
+            measurementId: "G-KFT32YZ4HQ"
+        };
+        const appId = firebaseConfig.projectId || 'default-app-id';
+        // --------------------------------------------------------------------
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- ELEMEN DOM ---
+        const socialInputView = document.getElementById('social-input-view');
+        const dashboardView = document.getElementById('dashboard-view');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingText = document.getElementById('loading-text');
+        const socialForm = document.getElementById('social-form');
+        const logoutBtn = document.getElementById('logout-btn');
+        const downloadPdfBtn = document.getElementById('download-pdf-btn');
+        const userInfo = document.getElementById('user-info');
+        const igUserInput = document.getElementById('instagram-username');
+        const xUserInput = document.getElementById('x-username');
+        const tiktokUserInput = document.getElementById('tiktok-username');
+        const socialErrorMessage = document.getElementById('social-error-message');
+        const geminiContentBtn = document.getElementById('gemini-content-btn');
+        const geminiSummaryBtn = document.getElementById('gemini-summary-btn');
+        const geminiOutput = document.getElementById('gemini-output');
+
+        let growthChartInstance = null;
+        let currentUserId = null;
+        const { jsPDF } = window.jspdf;
+
+        // --- FUNGSI API GEMINI ---
+        async function callGeminiAPI(prompt) {
+            loadingText.textContent = "Menghubungi Gemini...";
+            loadingOverlay.classList.remove('hidden');
+            geminiOutput.innerHTML = '';
+            
+            // PENTING: GANTI DENGAN API KEY DARI GOOGLE AI STUDIO
+            const apiKey = "AIzaSyXXXXXXXXXXXXXXXXXXXXXXX";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            
+            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const result = await response.json();
+                if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    return result.candidates[0].content.parts[0].text;
+                } else {
+                    throw new Error("Struktur respons API tidak valid.");
+                }
+            } finally {
+                loadingOverlay.classList.add('hidden');
+            }
+        }
+
+        // --- FUNGSI FIREBASE (DENGAN PATH YANG BENAR) ---
+        async function checkUserAccounts(userId) {
+            const accountDocRef = doc(db, `users/${userId}/socialAccounts`, "details");
+            const docSnap = await getDoc(accountDocRef);
+            return docSnap.exists() ? docSnap.data() : null;
+        }
+
+        async function saveUserAccounts(userId, accounts) {
+            const accountDocRef = doc(db, `users/${userId}/socialAccounts`, "details");
+            await setDoc(accountDocRef, accounts);
+            return await generateAndSaveHistoricalData(userId, 90, accounts);
+        }
+
+        async function generateAndSaveHistoricalData(userId, totalDays, accounts) {
+            const growthDataColRef = collection(db, `users/${userId}/growthData`);
+            const batch = [];
+            let yesterdaysData = {};
+
+            const currentStats = {
+                instagram: { followers: Math.floor(Math.random() * 5000) + 50000, likes: 0 },
+                x: { followers: Math.floor(Math.random() * 5000) + 30000, likes: 0 },
+                tiktok: { followers: Math.floor(Math.random() * 10000) + 100000, likes: Math.floor(Math.random() * 50000) + 1000000 }
+            };
+
+            for (let i = 0; i < totalDays; i++) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dateString = date.toISOString().split('T')[0];
+
+                const dailyFollowers = (currentStats.instagram.followers + currentStats.x.followers + currentStats.tiktok.followers) - (i * (150 + Math.random() * 50));
+                const dailyLikes = (currentStats.tiktok.likes) - (i * (1000 + Math.random() * 500));
+                
+                const dayData = {
+                    date: dateString,
+                    followers: Math.round(dailyFollowers),
+                    likes: Math.round(dailyLikes)
+                };
+
+                if (i === 1) {
+                    yesterdaysData = dayData;
+                }
+
+                batch.push(setDoc(doc(growthDataColRef, dateString), dayData));
+            }
+            await Promise.all(batch);
+            return { currentStats, yesterdaysData };
+        }
+        
+        async function fetchGrowthData(userId, days) {
+            const growthDataColRef = collection(db, `users/${userId}/growthData`);
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - days);
+            const startDateString = startDate.toISOString().split('T')[0];
+
+            const q = query(growthDataColRef, where("date", ">=", startDateString));
+            const querySnapshot = await getDocs(q);
+            
+            let data = querySnapshot.docs.map(doc => doc.data());
+            data.sort((a, b) => new Date(a.date) - new Date(b.date));
+            return data;
+        }
+
+        // --- LOGIKA UI & APLIKASI ---
+        function showView(view) {
+            socialInputView.style.display = 'none';
+            dashboardView.style.display = 'none';
+            if(view) view.style.display = 'flex';
+        }
+
+        function updateDashboardUI(accounts, stats) {
+            const { currentStats, yesterdaysData } = stats;
+
+            const igLogo = `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-pink-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>`;
+            const xLogo = `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
+            const tiktokLogo = `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-cyan-400" fill="currentColor" viewBox="0 0 24 24"><path d="M16.6 5.82s.51.5 0 0c-.52-.5-4.34-2.41-4.34-2.41v10.32a2.74 2.74 0 1 1-2.73-2.73 2.73 2.73 0 0 1 2.73 2.73V5.82s3.82 1.91 4.34 2.41c.52.5 0 0 0 0z"></path></svg>`;
+            
+            document.getElementById('ig-header').innerHTML = `<div class="flex items-center space-x-3">${igLogo}<p class="font-mono text-lg text-slate-300">${accounts.instagram}</p></div>`;
+            document.getElementById('x-header').innerHTML = `<div class="flex items-center space-x-3">${xLogo}<p class="font-mono text-lg text-slate-300">${accounts.x}</p></div>`;
+            document.getElementById('tiktok-header').innerHTML = `<div class="flex items-center space-x-3">${tiktokLogo}<p class="font-mono text-lg text-slate-300">${accounts.tiktok}</p></div>`;
+
+            const totalYesterdayFollowers = yesterdaysData.followers || 0;
+            const totalCurrentFollowers = currentStats.instagram.followers + currentStats.x.followers + currentStats.tiktok.followers;
+            const igYesterday = totalYesterdayFollowers * (currentStats.instagram.followers / totalCurrentFollowers);
+            const xYesterday = totalYesterdayFollowers * (currentStats.x.followers / totalCurrentFollowers);
+
+            const igGrowth = currentStats.instagram.followers - igYesterday;
+            const xGrowth = currentStats.x.followers - xYesterday;
+
+            const formatGrowth = (g) => {
+                const growth = Math.round(g);
+                if (growth >= 0) {
+                    return `<span class="growth-positive">+${growth.toLocaleString('id-ID')}</span>`;
+                }
+                return `<span class="growth-negative">${growth.toLocaleString('id-ID')}</span>`;
+            };
+
+            document.getElementById('ig-followers').textContent = currentStats.instagram.followers.toLocaleString('id-ID');
+            document.getElementById('ig-growth').innerHTML = formatGrowth(igGrowth);
+            document.getElementById('x-followers').textContent = currentStats.x.followers.toLocaleString('id-ID');
+            document.getElementById('x-growth').innerHTML = formatGrowth(xGrowth);
+            document.getElementById('tiktok-followers').textContent = currentStats.tiktok.followers.toLocaleString('id-ID');
+            document.getElementById('tiktok-likes').textContent = currentStats.tiktok.likes.toLocaleString('id-ID');
+        }
+
+        async function updateChart(days = 30) {
+            if (!currentUserId) return;
+            const data = await fetchGrowthData(currentUserId, days);
+
+            if (growthChartInstance) {
+                growthChartInstance.data.labels = data.map(d => new Date(d.date).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'}));
+                growthChartInstance.data.datasets[0].data = data.map(d => (d.followers / 1000).toFixed(1));
+                growthChartInstance.data.datasets[1].data = data.map(d => (d.likes / 1000).toFixed(1));
+                growthChartInstance.update();
+            }
+        }
+
+        function initChart() {
+            if (growthChartInstance) growthChartInstance.destroy();
+            const ctx = document.getElementById('growthChart').getContext('2d');
+            growthChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        { label: 'Pengikut (K)', data: [], borderColor: '#6366f1', backgroundColor: 'rgba(99, 102, 241, 0.1)', borderWidth: 3, tension: 0.4, fill: true },
+                        { label: 'Suka (K)', data: [], borderColor: '#ec4899', backgroundColor: 'rgba(236, 72, 153, 0.1)', borderWidth: 3, tension: 0.4, fill: true }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        y: { ticks: { color: '#94a3b8', callback: (v) => v + 'K' }, grid: { color: 'rgba(148, 163, 184, 0.1)' } },
+                        x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148, 163, 184, 0.1)' } }
+                    },
+                    plugins: { legend: { labels: { color: '#cbd5e1' } } }
+                }
+            });
+        }
+
+        // --- ALUR UTAMA APLIKASI (DIPERBAIKI) ---
+        async function main() {
+            onAuthStateChanged(auth, async (user) => {
+                let currentUser = user;
+                try {
+                    if (!currentUser) {
+                        loadingText.textContent = "Mengautentikasi sesi...";
+                        loadingOverlay.classList.remove('hidden');
+                        currentUser = (await signInAnonymously(auth)).user;
+                    }
+
+                    currentUserId = currentUser.uid;
+                    userInfo.textContent = `Selamat datang! User ID: ${currentUser.uid.substring(0, 8)}...`;
+                    
+                    loadingText.textContent = "Mengecek akun Anda...";
+                    loadingOverlay.classList.remove('hidden');
+                    
+                    const accounts = await checkUserAccounts(currentUser.uid);
+                    
+                    if (accounts) {
+                        const growthData = await fetchGrowthData(currentUser.uid, 2);
+                        if (growthData.length < 2) {
+                            const stats = await generateAndSaveHistoricalData(currentUser.uid, 90, accounts);
+                            updateDashboardUI(accounts, stats);
+                        } else {
+                            const currentStats = {
+                                instagram: { followers: Math.floor(growthData[1].followers * 0.4), likes: 0 },
+                                x: { followers: Math.floor(growthData[1].followers * 0.2), likes: 0 },
+                                tiktok: { followers: Math.floor(growthData[1].followers * 0.4), likes: Math.floor(growthData[1].likes * 1.01) }
+                            };
+                            currentStats.instagram.followers += (growthData[1].followers - (currentStats.instagram.followers + currentStats.x.followers + currentStats.tiktok.followers));
+                            updateDashboardUI(accounts, { currentStats, yesterdaysData: growthData[0] });
+                        }
+                        
+                        initChart();
+                        await updateChart(30);
+                        showView(dashboardView);
+                    } else {
+                        showView(socialInputView);
+                    }
+                } catch (error) {
+                    console.error("Terjadi error pada alur utama:", error);
+                    if (error.code === 'auth/configuration-not-found') {
+                        loadingText.innerHTML = `Error: Autentikasi Anonim belum diaktifkan.<br>Buka Firebase Console -> Authentication -> Get Started -> Aktifkan Anonymous.`;
+                    } else {
+                        loadingText.textContent = `Error: ${error.message}. Segarkan halaman.`;
+                    }
+                } finally {
+                    if (!loadingText.textContent.includes("Error:")) {
+                        loadingOverlay.classList.add('hidden');
+                    }
+                }
+            });
+        }
+
+        // --- EVENT LISTENERS ---
+        socialForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const accounts = {
+                instagram: igUserInput.value.trim(),
+                x: xUserInput.value.trim(),
+                tiktok: tiktokUserInput.value.trim()
+            };
+
+            if (!accounts.instagram || !accounts.x || !accounts.tiktok) {
+                socialErrorMessage.textContent = "Harap isi semua kolom username.";
+                socialErrorMessage.classList.remove('hidden'); return;
+            }
+            socialErrorMessage.classList.add('hidden');
+            
+            loadingText.textContent = "Menyimpan akun & menghasilkan data...";
+            loadingOverlay.classList.remove('hidden');
+
+            try {
+                const stats = await saveUserAccounts(currentUserId, accounts);
+                updateDashboardUI(accounts, stats);
+                initChart();
+                await updateChart(30);
+                showView(dashboardView);
+            } catch (error) {
+                console.error("Gagal menyimpan akun:", error);
+                socialErrorMessage.textContent = `Gagal menyimpan: ${error.message}`;
+                socialErrorMessage.classList.remove('hidden');
+            } finally {
+                loadingOverlay.classList.add('hidden');
+            }
+        });
+
+        logoutBtn.addEventListener('click', () => signOut(auth).then(() => window.location.reload()));
+
+        document.querySelectorAll('.time-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const days = button.dataset.days;
+                updateChart(days);
+                document.querySelectorAll('.time-btn').forEach(btn => btn.classList.remove('btn-active'));
+                button.classList.add('btn-active');
+            });
+        });
+
+        geminiContentBtn.addEventListener('click', async () => {
+            const prompt = `Berikan saya 5 ide konten yang menarik dan kreatif untuk akun media sosial dengan detail berikut:\n- Instagram: ${igUserInput.value}\n- TikTok: ${tiktokUserInput.value}\nFokus pada ide yang bisa viral dan meningkatkan engagement. Berikan dalam format daftar bernomor.`;
+            
+            try {
+                const result = await callGeminiAPI(prompt);
+                geminiOutput.innerHTML = `<div class="gemini-card p-4 rounded-lg"><h3 class="font-bold text-lg mb-2 text-indigo-300">Ide Konten dari Gemini</h3><div class="prose prose-invert max-w-none">${result.replace(/\n/g, '<br>')}</div></div>`;
+            } catch(error) {
+                 geminiOutput.innerHTML = `<div class="gemini-card p-4 rounded-lg bg-red-900 border-red-500"><h3 class="font-bold text-lg mb-2 text-red-300">Terjadi Kesalahan</h3><p>Gagal mendapatkan ide konten. Silakan coba lagi. Error: ${error.message}</p></div>`;
+            }
+        });
+
+        geminiSummaryBtn.addEventListener('click', async () => {
+            const labels = growthChartInstance.data.labels;
+            const followersData = growthChartInstance.data.datasets[0].data;
+            const likesData = growthChartInstance.data.datasets[1].data;
+            const dataSummary = `Data Pertumbuhan Pengikut (dalam ribuan): ${followersData.join(', ')}. Data Pertumbuhan Suka (dalam ribuan): ${likesData.join(', ')}. Periode Waktu: dari ${labels[0]} hingga ${labels[labels.length - 1]}.`;
+            const prompt = `Anda adalah seorang analis media sosial. Berdasarkan data berikut, berikan ringkasan performa akun dalam 3 paragraf singkat. Jelaskan tren utama, soroti poin positif, dan berikan satu saran praktis untuk perbaikan. Data:\n${dataSummary}`;
+            
+            try {
+                const result = await callGeminiAPI(prompt);
+                geminiOutput.innerHTML = `<div class="gemini-card p-4 rounded-lg"><h3 class="font-bold text-lg mb-2 text-teal-300">Ringkasan Performa dari Gemini</h3><div class="prose prose-invert max-w-none">${result.replace(/\n/g, '<br>')}</div></div>`;
+            } catch(error) {
+                geminiOutput.innerHTML = `<div class="gemini-card p-4 rounded-lg bg-red-900 border-red-500"><h3 class="font-bold text-lg mb-2 text-red-300">Terjadi Kesalahan</h3><p>Gagal menganalisis data. Silakan coba lagi. Error: ${error.message}</p></div>`;
+            }
+        });
+        
+        downloadPdfBtn.addEventListener('click', function() {
+            html2canvas(document.getElementById('chart-container'), { backgroundColor: '#1e293b' })
+                .then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height] });
+                    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+                    pdf.save('laporan-pertumbuhan.pdf');
+                });
+        });
+
+        // Jalankan aplikasi
+        main();
+    </script>
+</body>
+</html>
